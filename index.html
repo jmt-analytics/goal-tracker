@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Goal Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f3ec; --surface:#fffdf8; --surface-2:#efeadf; --ink:#1d1f22; --ink-2:#5a5e66; --ink-3:#8b8f97;
+  --line:#e2dccf; --accent:#2f6f5e; --accent-ink:#ffffff; --accent-soft:#dcebe5;
+  --warn:#b4632a; --warn-soft:#f6e3d3; --danger:#b23a3a; --done:#2f6f5e;
+  --radius:14px; --shadow:0 1px 2px rgba(30,25,15,.05),0 4px 14px rgba(30,25,15,.05);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#16181b; --surface:#1f2226; --surface-2:#282c31; --ink:#eceae5; --ink-2:#b0b3b8; --ink-3:#7d8187;
+    --line:#33373d; --accent:#6fbfa6; --accent-ink:#0f1a16; --accent-soft:#22362f;
+    --warn:#e39a62; --warn-soft:#3a2a1e; --danger:#e07272; --done:#6fbfa6;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 64px}
+.hidden{display:none!important}
+
+/* header */
+header.top{display:flex;align-items:center;gap:12px;padding:18px 0 10px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:650;font-size:22px;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:10px}
+.badge{font:600 11px/1 var(--font);text-transform:uppercase;letter-spacing:.06em;padding:5px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn)}
+.yearnav{display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:3px}
+.yearnav span{font-family:var(--display);font-weight:650;font-size:18px;min-width:56px;text-align:center}
+.iconbtn{border:0;background:transparent;width:34px;height:34px;border-radius:99px;display:grid;place-items:center;color:var(--ink-2)}
+.iconbtn:hover{background:var(--surface-2);color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:5px 10px;font-size:13px;border-radius:8px}
+.menu{position:relative}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:6px;min-width:220px;z-index:20}
+.menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 12px;border-radius:8px}
+.menu-pop button:hover{background:var(--surface-2)}
+.menu-pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.menu-pop .label{font-size:12px;color:var(--ink-3);padding:6px 12px 2px}
+
+/* sections */
+section.block{margin-top:22px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.sec-head h2{font-family:var(--display);font-weight:650;font-size:21px;margin:0;letter-spacing:-.01em}
+.sec-head .meta{color:var(--ink-3);font-size:13px}
+.sec-head .spacer{margin-left:auto}
+.months{display:flex;gap:4px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.months::-webkit-scrollbar{display:none}
+.months button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13px;font-weight:500;color:var(--ink-2);flex:0 0 auto;position:relative}
+.months button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.months button.now::after{content:"";position:absolute;top:3px;right:5px;width:5px;height:5px;border-radius:99px;background:var(--accent)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.archived{opacity:.6}
+.card-top{display:flex;align-items:flex-start;gap:8px}
+.card-title{font-weight:600;font-size:15.5px;line-height:1.3;margin:0;word-break:break-word}
+.card-desc{color:var(--ink-2);font-size:13px;margin:2px 0 0;word-break:break-word}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{font-size:11.5px;color:var(--ink-2);background:var(--surface-2);border-radius:6px;padding:2px 7px}
+.card-top .grow{flex:1;min-width:0}
+.bar{position:relative;height:8px;background:var(--surface-2);border-radius:99px;overflow:visible}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:99px;transition:width .3s}
+.bar .pace{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink-3);border-radius:2px}
+.nums{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
+.nums strong{font-size:17px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.nums .status{margin-left:auto;font-weight:500}
+.status.ahead,.status.done{color:var(--done)}
+.status.behind{color:var(--warn)}
+.card-actions{display:flex;gap:6px;align-items:center}
+.card-actions .grow{flex:1}
+.check{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:500;flex:1}
+.check .box{width:20px;height:20px;border-radius:6px;border:2px solid var(--ink-3);display:grid;place-items:center;flex:0 0 auto}
+.check.on{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.check.on .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.strip{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.strip button{height:18px;border:0;border-radius:4px;background:var(--surface-2);padding:0;position:relative;overflow:hidden}
+.strip button i{position:absolute;inset:auto 0 0 0;background:var(--accent);opacity:.85}
+.strip button.off{opacity:.3;cursor:default}
+.strip button.sel{outline:2px solid var(--ink);outline-offset:1px}
+.strip-labels{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;font-size:9.5px;color:var(--ink-3);text-align:center;margin-top:2px}
+
+.empty{border:1.5px dashed var(--line);border-radius:var(--radius);padding:22px;text-align:center;color:var(--ink-2)}
+.empty p{margin:0 0 12px}
+
+/* welcome / auth */
+.center{min-height:80vh;display:grid;place-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px;max-width:420px;width:100%;box-shadow:var(--shadow)}
+.panel h1{font-family:var(--display);font-weight:650;font-size:28px;margin:0 0 6px;letter-spacing:-.015em}
+.panel p{color:var(--ink-2);margin:0 0 18px}
+.panel .stack{display:flex;flex-direction:column;gap:10px}
+.msg{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--warn-soft);color:var(--warn)}
+.msg.ok{background:var(--accent-soft);color:var(--accent)}
+.linkbtn{border:0;background:none;color:var(--accent);padding:0;font-weight:500}
+
+/* forms & dialogs */
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:500;color:var(--ink-2)}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{
+  width:100%;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 11px;font-size:15px;color:var(--ink)}
+textarea{resize:vertical;min-height:60px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.seg{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:7px 8px;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+dialog{border:0;border-radius:18px;padding:0;background:var(--surface);color:var(--ink);width:min(480px,calc(100vw - 24px));max-height:calc(100vh - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(15,15,20,.45)}
+.dlg{padding:22px;display:flex;flex-direction:column;gap:14px}
+.dlg h3{font-family:var(--display);font-weight:650;font-size:20px;margin:0}
+.dlg .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}
+.dlg .foot .left{margin-right:auto}
+.note{font-size:12.5px;color:var(--ink-3)}
+.warnnote{font-size:12.5px;color:var(--warn)}
+.hist{display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow:auto}
+.hist .it{display:flex;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}
+.hist .it .d{color:var(--ink-3);font-size:12.5px;width:84px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.hist .it .a{font-weight:600;font-variant-numeric:tabular-nums}
+.hist .it .n{color:var(--ink-2);flex:1;min-width:0;overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+@media (max-width:560px){
+  .brand{font-size:19px}
+  header.top{gap:8px}
+  .grid{grid-template-columns:1fr}
+  .hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="toast" class="toast hidden" role="status"></div>
+<dialog id="dlg"></dialog>
+
+<script src="config.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   Goal Tracker — single-page app
+   Back ends: Supabase (cloud) or browser localStorage (demo).
+   ===================================================================== */
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MON = MONTHS.map(m => m.slice(0,3));
+const CFG = window.GOAL_TRACKER_CONFIG || {};
+const CLOUD_CONFIGURED = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+const DEMO_KEY = "goal-tracker-demo-v1";
+const PREF_KEY = "goal-tracker-prefs-v1";
+
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtNum = n => { const v = Number(n)||0; return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined,{maximumFractionDigits:2}); };
+const pad2 = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() :
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==="x"?r:(r&3|8)).toString(16); }));
+function store_get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+function store_set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+function toast(msg, ms=2600){
+  const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add("hidden"), ms);
+}
+
+/* ---------------------------------------------------------------------
+   Data stores — same interface for both
+   --------------------------------------------------------------------- */
+const GOAL_FIELDS = ["year","title","description","category","timeframe","recurrence","month","start_month","end_month","measure","target","unit","archived","sort_order"];
+
+function normalizeGoal(g){
+  const o = {};
+  for (const k of GOAL_FIELDS) o[k] = g[k] ?? null;
+  o.archived = !!g.archived; o.sort_order = g.sort_order || 0;
+  if (o.timeframe === "yearly"){ o.recurrence = null; o.month = null; o.start_month = null; o.end_month = null; }
+  else if (o.recurrence === "once"){ o.start_month = null; o.end_month = null; }
+  else { o.month = null; }
+  if (o.measure === "checkbox"){ o.target = null; o.unit = null; }
+  else o.target = Number(o.target);
+  for (const k of ["description","category","unit"]) if (o[k] !== null && String(o[k]).trim() === "") o[k] = null;
+  return o;
+}
+
+class DemoStore {
+  constructor(){ this.kind = "demo"; this.db = store_get(DEMO_KEY) || {goals:[], entries:[]}; }
+  _save(){ store_set(DEMO_KEY, this.db); }
+  async listYear(y){
+    return { goals: this.db.goals.filter(g => g.year === y),
+             entries: this.db.entries.filter(e => e.period_year === y) };
+  }
+  async listAll(){ return { goals: [...this.db.goals], entries: [...this.db.entries] }; }
+  async saveGoal(g){
+    const row = normalizeGoal(g);
+    if (g.id){ const i = this.db.goals.findIndex(x => x.id === g.id);
+      this.db.goals[i] = {...this.db.goals[i], ...row, updated_at:new Date().toISOString()}; this._save(); return this.db.goals[i]; }
+    const now = new Date().toISOString();
+    const n = {id:uuid(), ...row, created_at:now, updated_at:now}; this.db.goals.push(n); this._save(); return n;
+  }
+  async deleteGoal(id){ this.db.goals = this.db.goals.filter(g => g.id !== id); this.db.entries = this.db.entries.filter(e => e.goal_id !== id); this._save(); }
+  async addEntry(e){ const n = {id:uuid(), created_at:new Date().toISOString(), ...e}; this.db.entries.push(n); this._save(); return n; }
+  async deleteEntry(id){ this.db.entries = this.db.entries.filter(e => e.id !== id); this._save(); }
+  async deletePeriodEntries(goalId, year, month){
+    this.db.entries = this.db.entries.filter(e => !(e.goal_id === goalId && e.period_year === year && (e.period_month ?? null) === (month ?? null))); this._save();
+  }
+  async years(){ return [...new Set(this.db.goals.map(g => g.year))]; }
+  async signOut(){}
+}
+
+class CloudStore {
+  constructor(sb){ this.kind = "cloud"; this.sb = sb; }
+  _chk({data, error}){ if (error) throw new Error(error.message || "Database error"); return data; }
+  async listYear(y){
+    const [g, e] = await Promise.all([
+      this.sb.from("goals").select("*").eq("year", y).order("sort_order").order("created_at"),
+      this.sb.from("progress_entries").select("*").eq("period_year", y).order("entry_date").limit(10000)
+    ]);
+    return { goals: this._chk(g), entries: this._chk(e) };
+  }
+  async listAll(){
+    const [g, e] = await Promise.all([
+      this.sb.from("goals").select("*").order("year").order("sort_order").order("created_at"),
+      this.sb.from("progress_entries").select("*").order("entry_date").limit(50000)
+    ]);
+    return { goals: this._chk(g), entries: this._chk(e) };
+  }
+  async saveGoal(g){
+    const row = normalizeGoal(g);
+    if (g.id) return this._chk(await this.sb.from("goals").update(row).eq("id", g.id).select().single());
+    return this._chk(await this.sb.from("goals").insert(row).select().single());
+  }
+  async deleteGoal(id){ this._chk(await this.sb.from("goals").delete().eq("id", id)); }
+  async addEntry(e){ return this._chk(await this.sb.from("progress_entries").insert(e).select().single()); }
+  async deleteEntry(id){ this._chk(await this.sb.from("progress_entries").delete().eq("id", id)); }
+  async deletePeriodEntries(goalId, year, month){
+    let q = this.sb.from("progress_entries").delete().eq("goal_id", goalId).eq("period_year", year);
+    q = month == null ? q.is("period_month", null) : q.eq("period_month", month);
+    this._chk(await q);
+  }
+  async years(){ const d = this._chk(await this.sb.from("goals").select("year")); return [...new Set(d.map(r => r.year))]; }
+  async signOut(){ await this.sb.auth.signOut(); }
+}
+
+/* ---------------------------------------------------------------------
+   App state
+   --------------------------------------------------------------------- */
+const today = new Date();
+const prefs = store_get(PREF_KEY) || {};
+const S = {
+  store: null, user: null,
+  year: today.getFullYear(), month: today.getMonth()+1,
+  goals: [], entries: [], showArchived: !!prefs.showArchived, years: [],
+};
+function savePrefs(){ store_set(PREF_KEY, {showArchived:S.showArchived}); }
+
+async function load(){
+  try {
+    const {goals, entries} = await S.store.listYear(S.year);
+    S.goals = goals; S.entries = entries;
+    S.years = await S.store.years();
+  } catch(err){ toast("Couldn't load: " + err.message, 5000); }
+  render();
+}
+
+/* ---------------------------------------------------------------------
+   Calculations
+   --------------------------------------------------------------------- */
+const isYearly = g => g.timeframe === "yearly";
+function appliesToMonth(g, m){
+  if (g.timeframe !== "monthly") return false;
+  if (g.recurrence === "once") return g.month === m;
+  return m >= g.start_month && m <= g.end_month;
+}
+function periodEntries(g, month){
+  const pm = isYearly(g) ? null : month;
+  return S.entries.filter(e => e.goal_id === g.id && e.period_year === g.year && (e.period_month ?? null) === pm);
+}
+function progress(g, month){ return periodEntries(g, month).reduce((s,e) => s + Number(e.amount||0), 0); }
+function pct(g, month){
+  const p = progress(g, month);
+  if (g.measure === "checkbox") return p > 0 ? 100 : 0;
+  return Math.max(0, Math.min(100, p / Number(g.target) * 100));
+}
+/** fraction of the period that has elapsed (null = period hasn't started) */
+function elapsedFrac(g, month){
+  const y = g.year, ty = today.getFullYear();
+  if (isYearly(g)){
+    if (y < ty) return 1; if (y > ty) return null;
+    const start = new Date(y,0,1), end = new Date(y+1,0,1);
+    return (today - start) / (end - start);
+  }
+  const tm = today.getMonth()+1;
+  if (y < ty || (y === ty && month < tm)) return 1;
+  if (y > ty || month > tm) return null;
+  const dim = new Date(y, month, 0).getDate();
+  return (today.getDate() - 0.5) / dim;
+}
+function statusOf(g, month){
+  const p = progress(g, month), f = elapsedFrac(g, month);
+  if (g.measure === "checkbox"){
+    if (p > 0) return {cls:"done", text:"Done"};
+    if (f === 1) return {cls:"behind", text:"Missed"};
+    return {cls:"", text:f === null ? "Not started" : "Open"};
+  }
+  const t = Number(g.target);
+  if (p >= t) return {cls:"done", text:"Complete"};
+  if (f === null) return p > 0 ? {cls:"ahead", text:"Early start"} : {cls:"", text:"Not started"};
+  if (f === 1) return {cls:"behind", text:`Ended ${fmtNum(t - p)} short`};
+  const expected = t * f;
+  if (p >= expected) return {cls:"ahead", text:"On pace"};
+  return {cls:"behind", text:`${fmtNum(Math.ceil((expected - p)*10)/10)} behind pace`};
+}
+function defaultEntryDate(g, month){
+  const y = g.year;
+  if (isYearly(g)) return y === today.getFullYear() ? ymd(today) : (y < today.getFullYear() ? `${y}-12-31` : `${y}-01-01`);
+  if (y === today.getFullYear() && month === today.getMonth()+1) return ymd(today);
+  const isPast = new Date(y, month, 0) < today;
+  return isPast ? ymd(new Date(y, month, 0)) : `${y}-${pad2(month)}-01`;
+}
+function periodLabel(g, month){ return isYearly(g) ? String(g.year) : `${MONTHS[month-1]} ${g.year}`; }
+function scheduleLabel(g){
+  if (isYearly(g)) return "Whole year";
+  if (g.recurrence === "once") return `${MONTHS[g.month-1]} only`;
+  if (g.start_month === 1 && g.end_month === 12) return "Every month";
+  return `Monthly, ${MON[g.start_month-1]}–${MON[g.end_month-1]}`;
+}
+
+/* ---------------------------------------------------------------------
+   Rendering
+   --------------------------------------------------------------------- */
+const ICON = {
+  left:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  right:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>',
+  dots:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  plus:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  down:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+};
+
+function render(){
+  const app = $("#app");
+  const vis = S.goals.filter(g => S.showArchived || !g.archived);
+  const yearly = vis.filter(isYearly);
+  const monthly = vis.filter(g => appliesToMonth(g, S.month));
+  const anyMonthly = vis.some(g => g.timeframe === "monthly");
+  const isCurYear = S.year === today.getFullYear();
+
+  app.innerHTML = `
+  <header class="top">
+    <div class="brand">Goal Tracker ${S.store.kind === "demo" ? '<span class="badge" title="Data is saved only in this browser">Demo</span>' : ""}</div>
+    <div class="yearnav" aria-label="Year">
+      <button class="iconbtn" data-act="year" data-d="-1" aria-label="Previous year">${ICON.left}</button>
+      <span>${S.year}</span>
+      <button class="iconbtn" data-act="year" data-d="1" aria-label="Next year">${ICON.right}</button>
+    </div>
+    <button class="btn primary" data-act="new" aria-label="New goal">${ICON.plus}<span class="hide-sm">New goal</span></button>
+    <div class="menu">
+      <button class="iconbtn" data-act="menu" aria-label="More options" aria-haspopup="true">${ICON.dots}</button>
+      <div class="menu-pop hidden" id="mainmenu">
+        <div class="label">Download ${S.year}</div>
+        <button data-act="export" data-fmt="xlsx">Excel workbook (.xlsx)</button>
+        <button data-act="export" data-fmt="csv-summary">Summary (.csv)</button>
+        <button data-act="export" data-fmt="csv-entries">Progress log (.csv)</button>
+        <div class="label">All years</div>
+        <button data-act="export" data-fmt="xlsx-all">Excel workbook, all years</button>
+        <hr>
+        <button data-act="copyyear">Copy goals to ${S.year+1}…</button>
+        <button data-act="archived">${S.showArchived ? "Hide" : "Show"} archived goals</button>
+        <hr>
+        ${S.store.kind === "demo"
+          ? `<button data-act="sample">Add sample goals</button><button data-act="cleardemo">Clear demo data</button>${CLOUD_CONFIGURED ? '<button data-act="leavedemo">Leave demo, sign in</button>' : ""}`
+          : `<div class="label">${esc(S.user?.email || "")}</div><button data-act="signout">Sign out</button>`}
+      </div>
+    </div>
+  </header>
+
+  <section class="block">
+    <div class="sec-head"><h2>Year goals</h2><span class="meta">${yearly.length ? `${yearly.filter(g=>pct(g)>=100).length} of ${yearly.length} complete` : ""}</span></div>
+    ${yearly.length ? `<div class="grid">${yearly.map(g => cardHTML(g, null)).join("")}</div>`
+      : emptyHTML(`No goals for the whole of ${S.year} yet.`, "yearly")}
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><h2>Monthly goals</h2><span class="meta">${MONTHS[S.month-1]} ${S.year}${monthly.length ? ` · ${monthly.filter(g=>pct(g,S.month)>=100).length} of ${monthly.length} complete` : ""}</span></div>
+    <div class="months" role="tablist">
+      ${MON.map((m,i) => `<button role="tab" aria-selected="${S.month===i+1}" class="${S.month===i+1?"on":""} ${isCurYear && today.getMonth()===i ? "now":""}" data-act="month" data-m="${i+1}">${m}</button>`).join("")}
+    </div>
+    ${monthly.length ? `<div class="grid">${monthly.map(g => cardHTML(g, S.month)).join("")}</div>`
+      : emptyHTML(anyMonthly ? `No monthly goals scheduled for ${MONTHS[S.month-1]}.` : `No monthly goals for ${S.year} yet.`, "monthly")}
+  </section>
+  `;
+  // scroll selected month chip into view on small screens
+  const ms = $(".months"), on = $(".months .on");
+  if (ms && on) ms.scrollLeft = on.offsetLeft - ms.offsetLeft - ms.clientWidth/2 + on.offsetWidth/2;
+}
+
+function emptyHTML(text, timeframe){
+  return `<div class="empty"><p>${esc(text)}</p><button class="btn" data-act="new" data-tf="${timeframe}">${ICON.plus} Add a ${timeframe === "yearly" ? "year" : "monthly"} goal</button></div>`;
+}
+
+function cardHTML(g, month){
+  const p = progress(g, month), pc = pct(g, month), st = statusOf(g, month), f = elapsedFrac(g, month);
+  const tags = [g.category ? `<span class="tag">${esc(g.category)}</span>` : "",
+                `<span class="tag">${esc(scheduleLabel(g))}</span>`,
+                g.archived ? '<span class="tag">Archived</span>' : ""].join("");
+  let body;
+  if (g.measure === "checkbox"){
+    body = `<div class="card-actions">
+      <button class="check ${p>0?"on":""}" data-act="toggle" data-id="${g.id}" data-m="${month ?? ""}" aria-pressed="${p>0}">
+        <span class="box">${p>0?ICON.check:""}</span>${p>0 ? "Done" : `Mark done for ${isYearly(g) ? g.year : MONTHS[month-1]}`}
+      </button>
+      <button class="iconbtn" data-act="gmenu" data-id="${g.id}" data-m="${month ?? ""}" aria-label="Goal options">${ICON.dots}</button>
+    </div>`;
+  } else {
+    const pace = (f !== null && f < 1 && p < Number(g.target)) ? `<div class="pace" style="left:calc(${(f*100).toFixed(1)}% - 1px)" title="Where you'd be at an even pace"></div>` : "";
+    body = `
+    <div class="nums"><strong>${fmtNum(p)}</strong><span>of ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""} · ${Math.floor(pc)}%</span>
+      <span class="status ${st.cls}">${esc(st.text)}</span></div>
+    <div class="bar" role="progressbar" aria-valuenow="${Math.round(pc)}" aria-valuemin="0" aria-valuemax="100"><div class="fill" style="width:${pc}%"></div>${pace}</div>
+    <div class="card-actions">
+      <button class="btn small primary" data-act="log" data-id="${g.id}" data-m="${month ?? ""}">${ICON.plus} Log progress</button>
+      <span class="grow"></span>
+      <button class="iconbtn" data-act="gmenu" data-id="${g.id}" data-m="${month ?? ""}" aria-label="Goal options">${ICON.dots}</button>
+    </div>`;
+  }
+  let strip = "";
+  if (g.timeframe === "monthly" && g.recurrence === "recurring"){
+    strip = `<div><div class="strip">${MON.map((m,i) => {
+      const mm = i+1, inRange = mm >= g.start_month && mm <= g.end_month;
+      const v = inRange ? pct(g, mm) : 0;
+      return `<button class="${inRange?"":"off"} ${mm===month?"sel":""}" ${inRange?`data-act="month" data-m="${mm}"`:"disabled"} title="${MONTHS[i]}: ${inRange ? Math.floor(v)+"%" : "not scheduled"}" aria-label="${MONTHS[i]} ${inRange ? Math.floor(v)+" percent" : "not scheduled"}"><i style="height:${v}%"></i></button>`;
+    }).join("")}</div><div class="strip-labels">${MON.map(m=>`<span>${m[0]}</span>`).join("")}</div></div>`;
+  }
+  return `<article class="card ${g.archived?"archived":""}">
+    <div class="card-top"><div class="grow">
+      <h3 class="card-title">${esc(g.title)}</h3>
+      ${g.description ? `<p class="card-desc">${esc(g.description)}</p>` : ""}
+      <div class="tags">${tags}</div>
+    </div></div>
+    ${body}
+    ${strip}
+    ${g.measure === "checkbox" && (st.text === "Missed" || st.text === "Not started") ? `<div class="nums"><span class="status ${st.cls}">${esc(st.text)}</span></div>` : ""}
+  </article>`;
+}
+
+/* ---------------------------------------------------------------------
+   Events
+   --------------------------------------------------------------------- */
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-act]");
+  const pop = $("#mainmenu");
+  if (pop && !ev.target.closest(".menu")) pop.classList.add("hidden");
+  if (!b || !S.store) return;
+  const act = b.dataset.act, id = b.dataset.id, m = b.dataset.m ? Number(b.dataset.m) : null;
+  const g = id ? S.goals.find(x => x.id === id) : null;
+  if (act !== "menu" && pop) pop.classList.add("hidden");
+  switch (act){
+    case "year": S.year += Number(b.dataset.d); S.month = S.year === today.getFullYear() ? today.getMonth()+1 : 1; await load(); break;
+    case "month": S.month = m; render(); break;
+    case "menu": pop.classList.toggle("hidden"); break;
+    case "new": openGoalEditor(null, b.dataset.tf); break;
+    case "log": openLog(g, m); break;
+    case "toggle": await toggleDone(g, m); break;
+    case "gmenu": openGoalMenu(g, m); break;
+    case "export": await doExport(b.dataset.fmt); break;
+    case "archived": S.showArchived = !S.showArchived; savePrefs(); render(); break;
+    case "copyyear": openCopyYear(); break;
+    case "sample": await addSampleGoals(); break;
+    case "cleardemo":
+      if (confirm("Delete all demo goals and progress in this browser?")){ localStorage.removeItem(DEMO_KEY); S.store = new DemoStore(); await load(); } break;
+    case "leavedemo": location.href = location.pathname; break;
+    case "signout": await S.store.signOut(); location.reload(); break;
+  }
+});
+
+async function toggleDone(g, month){
+  const pm = isYearly(g) ? null : month;
+  try {
+    if (progress(g, month) > 0) await S.store.deletePeriodEntries(g.id, g.year, pm);
+    else await S.store.addEntry({goal_id:g.id, period_year:g.year, period_month:pm, entry_date:defaultEntryDate(g, month), amount:1, note:null});
+    await load();
+  } catch(err){ toast("Couldn't save: " + err.message, 5000); }
+}
+
+/* ---------------------------------------------------------------------
+   Dialogs
+   --------------------------------------------------------------------- */
+const dlg = $("#dlg");
+function openDialog(html, onReady){
+  dlg.innerHTML = html;
+  if (!dlg.open) dlg.showModal();
+  dlg.querySelectorAll("[data-close]").forEach(x => x.addEventListener("click", () => dlg.close()));
+  onReady && onReady(dlg);
+}
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+
+function openGoalMenu(g, month){
+  const n = periodEntries(g, month).length;
+  openDialog(`<div class="dlg">
+    <h3>${esc(g.title)}</h3>
+    <div class="note">${esc(scheduleLabel(g))} · ${g.measure === "checkbox" ? "Done / not done" : `Target ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}`}${isYearly(g) ? "" : ` per month`}</div>
+    <div class="stack" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" id="m-edit">Edit goal</button>
+      <button class="btn" id="m-hist">Progress history for ${esc(periodLabel(g, month))} (${n})</button>
+      <button class="btn" id="m-arch">${g.archived ? "Restore from archive" : "Archive (hide but keep history)"}</button>
+      <button class="btn danger" id="m-del">Delete goal and all its progress</button>
+    </div>
+    <div class="foot"><button class="btn" data-close>Close</button></div></div>`, d => {
+    $("#m-edit", d).onclick = () => openGoalEditor(g);
+    $("#m-hist", d).onclick = () => openHistory(g, month);
+    $("#m-arch", d).onclick = async () => { try { await S.store.saveGoal({...g, archived:!g.archived}); dlg.close(); toast(g.archived ? "Goal restored" : "Goal archived"); await load(); } catch(err){ toast(err.message, 5000); } };
+    $("#m-del", d).onclick = async () => {
+      if (!confirm(`Delete "${g.title}" and all of its progress? This can't be undone.`)) return;
+      try { await S.store.deleteGoal(g.id); dlg.close(); toast("Goal deleted"); await load(); } catch(err){ toast(err.message, 5000); }
+    };
+  });
+}
+
+function openGoalEditor(g, presetTf){
+  const isNew = !g;
+  const v = g ? {...g} : {
+    year:S.year, title:"", description:"", category:"", timeframe: presetTf || "yearly",
+    recurrence:"recurring", month:S.month, start_month:1, end_month:12, measure:"numeric", target:"", unit:"", archived:false
+  };
+  if (!v.recurrence) v.recurrence = "recurring";
+  if (!v.month) v.month = S.month;
+  if (!v.start_month) v.start_month = 1;
+  if (!v.end_month) v.end_month = 12;
+  const hasEntries = g && S.entries.some(e => e.goal_id === g.id);
+  const cats = [...new Set(S.goals.map(x => x.category).filter(Boolean))];
+  const monthOpts = sel => MONTHS.map((mn,i) => `<option value="${i+1}" ${sel===i+1?"selected":""}>${mn}</option>`).join("");
+
+  openDialog(`<form class="dlg" id="gform" novalidate>
+    <h3>${isNew ? "New goal" : "Edit goal"} <span class="note" style="font-family:var(--font);font-weight:400">· ${v.year}</span></h3>
+    <label class="f">Goal<input type="text" name="title" maxlength="200" required value="${esc(v.title)}" placeholder="e.g. Read 24 books"></label>
+    <label class="f">Notes <span class="note" style="font-weight:400">(optional)</span><textarea name="description" rows="2" maxlength="1000">${esc(v.description || "")}</textarea></label>
+    <label class="f">Category <span class="note" style="font-weight:400">(optional)</span><input type="text" name="category" list="catlist" maxlength="60" value="${esc(v.category || "")}" placeholder="e.g. Health, Learning, Money">
+      <datalist id="catlist">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
+
+    <div class="f" style="display:flex;flex-direction:column;gap:6px"><span class="note" style="font-weight:500;color:var(--ink-2);font-size:13px">Timeframe</span>
+      <div class="seg" data-name="timeframe"><button type="button" data-v="yearly">Whole year</button><button type="button" data-v="monthly">Monthly</button></div></div>
+    <div id="monthly-opts" class="f" style="display:flex;flex-direction:column;gap:8px">
+      <div class="seg" data-name="recurrence"><button type="button" data-v="recurring">Repeats each month</button><button type="button" data-v="once">One specific month</button></div>
+      <div id="rec-range" class="row"><label class="f">From<select name="start_month">${monthOpts(v.start_month)}</select></label><label class="f">Through<select name="end_month">${monthOpts(v.end_month)}</select></label></div>
+      <div id="once-month"><label class="f">Month<select name="month">${monthOpts(v.month)}</select></label></div>
+    </div>
+
+    <div class="f" style="display:flex;flex-direction:column;gap:6px"><span class="note" style="font-weight:500;color:var(--ink-2);font-size:13px">How is it measured?</span>
+      <div class="seg" data-name="measure"><button type="button" data-v="numeric">A number to reach</button><button type="button" data-v="checkbox">Done / not done</button></div></div>
+    <div id="numeric-opts" class="row">
+      <label class="f"><span id="target-label">Target</span><input type="number" name="target" min="0" step="any" inputmode="decimal" value="${esc(v.target ?? "")}" placeholder="24"></label>
+      <label class="f">Unit <span class="note" style="font-weight:400">(optional)</span><input type="text" name="unit" maxlength="30" value="${esc(v.unit || "")}" placeholder="books"></label>
+    </div>
+    ${hasEntries ? '<div class="warnnote hidden" id="tfwarn">This goal already has logged progress. Changing its timeframe or schedule may hide progress logged under the old schedule (it stays in the database).</div>' : ""}
+    <div class="msg hidden" id="gerr"></div>
+    <div class="foot"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">${isNew ? "Add goal" : "Save changes"}</button></div>
+  </form>`, d => {
+    const state = {timeframe:v.timeframe, recurrence:v.recurrence, measure:v.measure};
+    const orig = {...state, start_month:v.start_month, end_month:v.end_month, month:v.month};
+    const sync = () => {
+      d.querySelectorAll(".seg").forEach(s => s.querySelectorAll("button").forEach(b => b.classList.toggle("on", state[s.dataset.name] === b.dataset.v)));
+      $("#monthly-opts", d).classList.toggle("hidden", state.timeframe !== "monthly");
+      $("#rec-range", d).classList.toggle("hidden", state.recurrence !== "recurring");
+      $("#once-month", d).classList.toggle("hidden", state.recurrence !== "once");
+      $("#numeric-opts", d).classList.toggle("hidden", state.measure !== "numeric");
+      $("#target-label", d).textContent = state.timeframe === "monthly" ? "Target each month" : "Target for the year";
+      const w = $("#tfwarn", d);
+      if (w){
+        const f = new FormData($("#gform"));
+        const changed = state.timeframe !== orig.timeframe || (state.timeframe === "monthly" && (state.recurrence !== orig.recurrence
+          || (state.recurrence === "once" && Number(f.get("month")) !== orig.month)
+          || (state.recurrence === "recurring" && (Number(f.get("start_month")) > orig.start_month || Number(f.get("end_month")) < orig.end_month))));
+        w.classList.toggle("hidden", !changed);
+      }
+    };
+    d.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { state[b.closest(".seg").dataset.name] = b.dataset.v; sync(); }));
+    d.querySelectorAll("select").forEach(s => s.addEventListener("change", sync));
+    sync();
+    setTimeout(() => $("[name=title]", d).focus(), 30);
+    $("#gform").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = new FormData(e.target), err = $("#gerr", d);
+      const out = {...(g || {}), year:v.year, title:String(f.get("title")).trim(), description:String(f.get("description")).trim(),
+        category:String(f.get("category")).trim(), timeframe:state.timeframe, recurrence: state.timeframe === "monthly" ? state.recurrence : null,
+        month:Number(f.get("month")), start_month:Number(f.get("start_month")), end_month:Number(f.get("end_month")),
+        measure:state.measure, target: state.measure === "numeric" ? Number(f.get("target")) : null, unit:String(f.get("unit") || "").trim(),
+        archived: g ? g.archived : false, sort_order: g ? g.sort_order : S.goals.length };
+      const problem = !out.title ? "Give the goal a name."
+        : (out.measure === "numeric" && !(out.target > 0)) ? "Enter a target greater than zero."
+        : (out.timeframe === "monthly" && out.recurrence === "recurring" && out.start_month > out.end_month) ? "The 'From' month must come before the 'Through' month."
+        : null;
+      if (problem){ err.textContent = problem; err.classList.remove("hidden"); return; }
+      try {
+        const saved = await S.store.saveGoal(out);
+        dlg.close(); toast(isNew ? "Goal added" : "Goal updated");
+        if (saved.timeframe === "monthly"){
+          if (saved.recurrence === "once") S.month = saved.month;
+          else if (!appliesToMonth(saved, S.month)) S.month = saved.start_month;
+        }
+        await load();
+      } catch(ex){ err.textContent = "Couldn't save: " + ex.message; err.classList.remove("hidden"); }
+    });
+  });
+}
+
+function openLog(g, month){
+  const p = progress(g, month);
+  openDialog(`<form class="dlg" id="lform">
+    <h3>Log progress</h3>
+    <div class="note">${esc(g.title)} · ${esc(periodLabel(g, month))} · ${fmtNum(p)} of ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""} so far</div>
+    <div class="row">
+      <label class="f">Amount${g.unit ? ` (${esc(g.unit)})` : ""}<input type="number" name="amount" step="any" inputmode="decimal" required value="1"></label>
+      <label class="f">Date<input type="date" name="date" required value="${defaultEntryDate(g, month)}"></label>
+    </div>
+    <label class="f">Note <span class="note" style="font-weight:400">(optional)</span><input type="text" name="note" maxlength="300" placeholder="e.g. Finished 'Middlemarch'"></label>
+    <div class="note">Use a negative amount to correct an earlier entry, or remove entries from the goal's history.</div>
+    <div class="msg hidden" id="lerr"></div>
+    <div class="foot"><button type="button" class="btn left" id="l-hist">History</button><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Save</button></div>
+  </form>`, d => {
+    const amt = $("[name=amount]", d); setTimeout(() => { amt.focus(); amt.select(); }, 30);
+    $("#l-hist", d).onclick = () => openHistory(g, month);
+    $("#lform").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = new FormData(e.target), amount = Number(f.get("amount")), err = $("#lerr", d);
+      if (!amount || !isFinite(amount)){ err.textContent = "Enter an amount other than zero."; err.classList.remove("hidden"); return; }
+      try {
+        await S.store.addEntry({goal_id:g.id, period_year:g.year, period_month:isYearly(g) ? null : month,
+          entry_date:String(f.get("date")), amount, note:String(f.get("note")).trim() || null});
+        dlg.close(); toast(`Logged ${fmtNum(amount)}${g.unit ? " " + g.unit : ""}`); await load();
+      } catch(ex){ err.textContent = "Couldn't save: " + ex.message; err.classList.remove("hidden"); }
+    });
+  });
+}
+
+function openHistory(g, month){
+  const list = periodEntries(g, month).slice().sort((a,b) => (b.entry_date||"").localeCompare(a.entry_date||"") || (b.created_at||"").localeCompare(a.created_at||""));
+  openDialog(`<div class="dlg">
+    <h3>History</h3>
+    <div class="note">${esc(g.title)} · ${esc(periodLabel(g, month))}</div>
+    ${list.length ? `<div class="hist">${list.map(e => `<div class="it">
+        <span class="d">${esc(e.entry_date)}</span>
+        <span class="a">${g.measure === "checkbox" ? "Done" : (Number(e.amount) > 0 ? "+" : "") + fmtNum(e.amount)}</span>
+        <span class="n">${esc(e.note || "")}</span>
+        <button class="btn small danger" data-del="${e.id}" aria-label="Delete entry">Delete</button></div>`).join("")}</div>`
+      : '<div class="empty" style="padding:16px">Nothing logged for this period yet.</div>'}
+    <div class="foot"><button class="btn" data-close>Close</button></div></div>`, d => {
+    d.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+      try { await S.store.deleteEntry(b.dataset.del); await load(); openHistory(S.goals.find(x => x.id === g.id), month); toast("Entry deleted"); }
+      catch(ex){ toast(ex.message, 5000); }
+    });
+  });
+}
+
+function openCopyYear(){
+  const src = S.goals.filter(g => !g.archived);
+  const next = S.year + 1;
+  openDialog(`<div class="dlg">
+    <h3>Copy goals to ${next}</h3>
+    <p class="note" style="margin:0">Creates fresh copies of your ${src.length} active ${S.year} goal${src.length===1?"":"s"} in ${next}, with no progress. Pick which ones:</p>
+    ${src.length ? `<div class="hist">${src.map(g => `<label class="it" style="cursor:pointer"><input type="checkbox" checked value="${g.id}"> <span class="n" style="color:var(--ink)">${esc(g.title)}</span><span class="d" style="width:auto">${esc(scheduleLabel(g))}</span></label>`).join("")}</div>` : '<div class="empty" style="padding:16px">No active goals to copy.</div>'}
+    <div class="foot"><button class="btn" data-close>Cancel</button>${src.length ? '<button class="btn primary" id="c-go">Copy</button>' : ""}</div></div>`, d => {
+    const go = $("#c-go", d); if (!go) return;
+    go.onclick = async () => {
+      const ids = [...d.querySelectorAll("input:checked")].map(i => i.value);
+      try {
+        for (const id of ids){ const g = S.goals.find(x => x.id === id); const {id:_, created_at, updated_at, user_id, ...rest} = g; await S.store.saveGoal({...rest, year:next}); }
+        dlg.close(); toast(`Copied ${ids.length} goal${ids.length===1?"":"s"} to ${next}`); S.year = next; S.month = next === today.getFullYear() ? today.getMonth()+1 : 1; await load();
+      } catch(ex){ toast("Couldn't copy: " + ex.message, 5000); }
+    };
+  });
+}
+
+async function addSampleGoals(){
+  const y = S.year;
+  const samples = [
+    {title:"Read 24 books", category:"Learning", timeframe:"yearly", measure:"numeric", target:24, unit:"books"},
+    {title:"Run 600 miles", category:"Health", timeframe:"yearly", measure:"numeric", target:600, unit:"miles"},
+    {title:"Plan a family vacation", category:"Family", timeframe:"yearly", measure:"checkbox"},
+    {title:"Work out", category:"Health", timeframe:"monthly", recurrence:"recurring", start_month:1, end_month:12, measure:"numeric", target:12, unit:"workouts"},
+    {title:"Review the budget", category:"Money", timeframe:"monthly", recurrence:"recurring", start_month:1, end_month:12, measure:"checkbox"},
+    {title:"File taxes", category:"Money", timeframe:"monthly", recurrence:"once", month:4, measure:"checkbox"},
+  ];
+  try {
+    const made = [];
+    for (const [i,s] of samples.entries()) made.push(await S.store.saveGoal({year:y, sort_order:S.goals.length+i, ...s}));
+    // a little sample progress so the bars mean something
+    const lastM = y === today.getFullYear() ? today.getMonth()+1 : (y < today.getFullYear() ? 12 : 0);
+    for (let m = 1; m <= lastM; m++){
+      await S.store.addEntry({goal_id:made[0].id, period_year:y, period_month:null, entry_date:`${y}-${pad2(m)}-15`, amount:2, note:null});
+      await S.store.addEntry({goal_id:made[1].id, period_year:y, period_month:null, entry_date:`${y}-${pad2(m)}-20`, amount:45, note:null});
+      await S.store.addEntry({goal_id:made[3].id, period_year:y, period_month:m, entry_date:`${y}-${pad2(m)}-10`, amount: m === lastM ? 5 : 10 + (m%3), note:null});
+      if (m < lastM) await S.store.addEntry({goal_id:made[4].id, period_year:y, period_month:m, entry_date:`${y}-${pad2(m)}-28`, amount:1, note:null});
+    }
+    toast("Sample goals added"); await load();
+  } catch(ex){ toast(ex.message, 5000); }
+}
+
+/* ---------------------------------------------------------------------
+   Export: CSV + XLSX (no external library — tiny XLSX writer below)
+   --------------------------------------------------------------------- */
+function summaryRows(goals, entries){
+  const keep = S.entries; S.entries = entries;
+  const rows = [];
+  for (const g of goals.slice().sort((a,b) => a.year - b.year || (a.timeframe > b.timeframe ? -1 : a.timeframe < b.timeframe ? 1 : 0) || (a.sort_order||0)-(b.sort_order||0))){
+    const months = isYearly(g) ? [null] : g.recurrence === "once" ? [g.month] : Array.from({length:g.end_month-g.start_month+1}, (_,i) => g.start_month+i);
+    for (const m of months){
+      const p = progress(g, m);
+      rows.push({
+        "Year": g.year, "Goal": g.title, "Category": g.category || "", "Timeframe": isYearly(g) ? "Yearly" : "Monthly",
+        "Schedule": scheduleLabel(g), "Month": m ? MONTHS[m-1] : "", "Month #": m || "",
+        "Measure": g.measure === "checkbox" ? "Done / not done" : "Number",
+        "Target": g.measure === "checkbox" ? "" : Number(g.target), "Unit": g.unit || "",
+        "Progress": g.measure === "checkbox" ? (p > 0 ? "Done" : "Not done") : p,
+        "% Complete": Math.round(pct(g, m) * 10) / 10, "Status": statusOf(g, m).text,
+        "Entries": periodEntries(g, m).length, "Archived": g.archived ? "Yes" : "No",
+      });
+    }
+  }
+  S.entries = keep;
+  return rows;
+}
+function entryRows(goals, entries){
+  const byId = Object.fromEntries(goals.map(g => [g.id, g]));
+  return entries.slice().sort((a,b) => (a.entry_date||"").localeCompare(b.entry_date||"")).map(e => {
+    const g = byId[e.goal_id] || {};
+    return { "Date": e.entry_date, "Goal": g.title || "(deleted goal)", "Category": g.category || "",
+      "Period": e.period_month ? `${MONTHS[e.period_month-1]} ${e.period_year}` : String(e.period_year),
+      "Amount": g.measure === "checkbox" ? "Done" : Number(e.amount), "Unit": g.unit || "", "Note": e.note || "" };
+  });
+}
+function goalRows(goals){
+  return goals.map(g => ({ "Goal ID": g.id, "Year": g.year, "Goal": g.title, "Notes": g.description || "", "Category": g.category || "",
+    "Timeframe": g.timeframe, "Recurrence": g.recurrence || "", "Month": g.month || "", "Start month": g.start_month || "", "End month": g.end_month || "",
+    "Measure": g.measure, "Target": g.target ?? "", "Unit": g.unit || "", "Archived": g.archived ? "Yes" : "No",
+    "Created": (g.created_at||"").slice(0,10), "Updated": (g.updated_at||"").slice(0,10) }));
+}
+function toCSV(rows){
+  if (!rows.length) return "";
+  const cols = Object.keys(rows[0]);
+  const cell = v => {
+    let s = String(v ?? "");
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(s) && isNaN(Number(s))) s = "'" + s; // stop spreadsheet formula injection
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+  return "﻿" + [cols.map(cell).join(","), ...rows.map(r => cols.map(c => cell(r[c])).join(","))].join("\r\n");
+}
+function download(name, data, type){
+  const blob = data instanceof Blob ? data : new Blob([data], {type});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function doExport(fmt){
+  try {
+    const stamp = ymd(new Date());
+    if (fmt === "csv-summary"){ const r = summaryRows(S.goals, S.entries); if (!r.length) return toast("Nothing to export for " + S.year);
+      return download(`goals-${S.year}-summary-${stamp}.csv`, toCSV(r), "text/csv;charset=utf-8"); }
+    if (fmt === "csv-entries"){ const r = entryRows(S.goals, S.entries); if (!r.length) return toast("No progress logged in " + S.year);
+      return download(`goals-${S.year}-progress-log-${stamp}.csv`, toCSV(r), "text/csv;charset=utf-8"); }
+    const all = fmt === "xlsx-all";
+    const {goals, entries} = all ? await S.store.listAll() : {goals:S.goals, entries:S.entries};
+    if (!goals.length) return toast("Nothing to export yet");
+    const blob = makeXLSX([
+      {name:"Summary", rows:summaryRows(goals, entries)},
+      {name:"Progress log", rows:entryRows(goals, entries)},
+      {name:"Goals", rows:goalRows(goals)},
+    ]);
+    download(`goals-${all ? "all-years" : S.year}-${stamp}.xlsx`, blob);
+  } catch(ex){ toast("Export failed: " + ex.message, 5000); }
+}
+
+/* Minimal XLSX writer: builds an Office Open XML workbook in a stored (uncompressed) zip. */
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n=0;n<256;n++){ let c=n; for (let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i=0;i<u8.length;i++) c = CRC_TABLE[(c^u8[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zipStored(files){ // files: [{name, data:Uint8Array}]
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const d = new Date(), dosTime = (d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dosDate = ((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  for (const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+    lh.setUint16(10,dosTime,true); lh.setUint16(12,dosDate,true); lh.setUint32(14,crc,true); lh.setUint32(18,sz,true); lh.setUint32(22,sz,true);
+    lh.setUint16(26,nm.length,true); lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer), nm, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+    ch.setUint16(12,dosTime,true); ch.setUint16(14,dosDate,true); ch.setUint32(16,crc,true); ch.setUint32(20,sz,true); ch.setUint32(24,sz,true);
+    ch.setUint16(28,nm.length,true); ch.setUint32(42,offset,true);
+    central.push(new Uint8Array(ch.buffer), nm);
+    offset += 30 + nm.length + sz;
+  }
+  const cdSize = central.reduce((s,p) => s + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+  end.setUint32(12,cdSize,true); end.setUint32(16,offset,true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function makeXLSX(sheets){
+  const enc = new TextEncoder();
+  const x = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const col = n => { let s = ""; n++; while (n){ const r = (n-1)%26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); } return s; };
+  const sheetXML = rows => {
+    const cols = rows.length ? Object.keys(rows[0]) : ["(no data)"];
+    const widths = cols.map(c => Math.min(60, Math.max(c.length, ...rows.map(r => String(r[c] ?? "").length)) + 2));
+    let out = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`;
+    out += `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`;
+    out += `<cols>${widths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>`;
+    out += `<row r="1">${cols.map((c,i) => `<c r="${col(i)}1" t="inlineStr" s="1"><is><t>${x(c)}</t></is></c>`).join("")}</row>`;
+    rows.forEach((r, ri) => {
+      out += `<row r="${ri+2}">` + cols.map((c, ci) => {
+        const v = r[c], ref = `${col(ci)}${ri+2}`;
+        if (v === "" || v === null || v === undefined) return "";
+        if (typeof v === "number" && isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`;
+        return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+      }).join("") + `</row>`;
+    });
+    out += `</sheetData>${rows.length ? `<autoFilter ref="A1:${col(cols.length-1)}${rows.length+1}"/>` : ""}</worksheet>`;
+    return out;
+  };
+  const files = [];
+  const add = (name, str) => files.push({name, data:enc.encode(str)});
+  add("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i) => `<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`);
+  add("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  add("xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i) => `<sheet name="${x(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets>${sheets.map((s,i) => s.rows.length ? `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${x(s.name)}'!$A$1:$${col(Object.keys(s.rows[0]).length-1)}$${s.rows.length+1}</definedName></definedNames>` : "").join("").replace(/<\/definedNames><definedNames>/g,"")}</workbook>`);
+  add("xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i) => `<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  add("xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCEBE5"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
+  sheets.forEach((s,i) => add(`xl/worksheets/sheet${i+1}.xml`, sheetXML(s.rows)));
+  return zipStored(files);
+}
+
+/* ---------------------------------------------------------------------
+   Start-up: demo vs. cloud, sign-in
+   --------------------------------------------------------------------- */
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Couldn't load " + src)); document.head.appendChild(s); }); }
+
+function showWelcome(){
+  $("#app").innerHTML = `<div class="center"><div class="panel">
+    <h1>Goal Tracker</h1>
+    <p>No database is connected yet. Add your Supabase details to <code>config.js</code> (see SETUP.md), or try the app now in demo mode — demo data stays only in this browser.</p>
+    <div class="stack"><button class="btn primary" id="w-demo">Try demo mode</button></div>
+  </div></div>`;
+  $("#w-demo").onclick = () => { location.search = "?demo=1"; };
+}
+
+function showSignIn(sb, message){
+  $("#app").innerHTML = `<div class="center"><form class="panel" id="si">
+    <h1>Goal Tracker</h1>
+    <p>Sign in to see your goals.</p>
+    <div class="stack">
+      <label class="f">Email<input type="email" name="email" autocomplete="username" required></label>
+      <label class="f">Password<input type="password" name="password" autocomplete="current-password" required></label>
+      <div class="msg ${message ? (message.ok ? "ok" : "") : "hidden"}" id="sierr">${esc(message?.text || "")}</div>
+      <button class="btn primary" type="submit">Sign in</button>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><button type="button" class="linkbtn" id="si-forgot">Forgot password?</button><button type="button" class="linkbtn" id="si-demo">Try demo mode</button></div>
+    </div></form></div>`;
+  const err = $("#sierr");
+  $("#si").addEventListener("submit", async e => {
+    e.preventDefault(); const f = new FormData(e.target);
+    err.className = "msg"; err.textContent = "Signing in…";
+    const {error} = await sb.auth.signInWithPassword({email:String(f.get("email")).trim(), password:String(f.get("password"))});
+    if (error){ err.textContent = error.message; }
+  });
+  $("#si-forgot").onclick = async () => {
+    const email = String(new FormData($("#si")).get("email")).trim();
+    if (!email){ err.className = "msg"; err.textContent = "Type your email above first."; return; }
+    const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    err.className = error ? "msg" : "msg ok"; err.textContent = error ? error.message : "Check your email for a reset link.";
+  };
+  $("#si-demo").onclick = () => { location.search = "?demo=1"; };
+}
+
+function promptNewPassword(sb){
+  openDialog(`<form class="dlg" id="pw"><h3>Choose a new password</h3>
+    <label class="f">New password<input type="password" name="pw" minlength="8" autocomplete="new-password" required></label>
+    <div class="msg hidden" id="pwerr"></div>
+    <div class="foot"><button class="btn primary" type="submit">Save password</button></div></form>`, d => {
+    $("#pw").addEventListener("submit", async e => {
+      e.preventDefault();
+      const {error} = await sb.auth.updateUser({password: String(new FormData(e.target).get("pw"))});
+      if (error){ const m = $("#pwerr", d); m.textContent = error.message; m.classList.remove("hidden"); return; }
+      dlg.close(); toast("Password updated");
+    });
+  });
+}
+
+async function start(){
+  const params = new URLSearchParams(location.search);
+  if (params.has("demo") || !CLOUD_CONFIGURED){
+    if (!params.has("demo") && !CLOUD_CONFIGURED) return showWelcome();
+    S.store = new DemoStore(); return load();
+  }
+  $("#app").innerHTML = '<div class="center"><p class="note">Loading…</p></div>';
+  try { await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"); }
+  catch { $("#app").innerHTML = '<div class="center"><div class="panel"><h1>Can\'t connect</h1><p>The app couldn\'t load its database library. Check your internet connection and reload.</p></div></div>'; return; }
+  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true}});
+  let started = false;
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY"){ setTimeout(() => promptNewPassword(sb), 300); }
+    if (session && !started){
+      started = true; S.user = session.user; S.store = new CloudStore(sb);
+      setTimeout(load, 0);
+    } else if (!session){
+      if (started){ location.reload(); return; }
+      showSignIn(sb);
+    }
+  });
+}
+start();
+</script>
+</body>
+</html>
