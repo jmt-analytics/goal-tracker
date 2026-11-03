@@ -136,6 +136,14 @@ dialog::backdrop{background:rgba(15,15,20,.45)}
 .hist .it .a{font-weight:600;font-variant-numeric:tabular-nums}
 .hist .it .n{color:var(--ink-2);flex:1;min-width:0;overflow-wrap:anywhere}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}
+.toast:not(.hidden){display:flex;align-items:center;gap:14px}
+.toast-act{border:0;background:none;color:inherit;font-weight:600;text-decoration:underline;padding:0}
+.btn.inc{font-variant-numeric:tabular-nums;font-weight:600;min-width:42px;justify-content:center}
+.btn.inc:active{transform:scale(.94)}
+.grip{border:0;background:transparent;color:var(--ink-3);width:30px;height:30px;margin:-5px -7px 0 0;border-radius:8px;display:grid;place-items:center;cursor:grab;touch-action:none;flex:0 0 auto}
+.grip:hover,.grip:focus-visible{background:var(--surface-2);color:var(--ink)}
+.card.dragging{position:relative;z-index:5;outline:2px solid var(--accent);box-shadow:0 14px 34px rgba(0,0,0,.2);transform:scale(1.02)}
+body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-webkit-user-select:none}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
 @media (max-width:560px){
@@ -176,8 +184,19 @@ const uuid = () => (crypto.randomUUID ? crypto.randomUUID() :
 function store_get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
 function store_set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
-function toast(msg, ms=2600){
-  const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
+const fmtTime = d => new Date(d).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const fmtStamp = d => { const x = new Date(d); return isNaN(x) ? "" : `${ymd(x)} ${pad2(x.getHours())}:${pad2(x.getMinutes())}`; };
+const sortGoals = list => list.slice().sort((a,b) => (a.sort_order||0) - (b.sort_order||0) || String(a.created_at||"").localeCompare(String(b.created_at||"")));
+const nextSortOrder = () => S.goals.reduce((mx, g) => Math.max(mx, g.sort_order||0), -1) + 1;
+
+function toast(msg, ms=2600, action){
+  const t = $("#toast"); t.innerHTML = "";
+  const s = document.createElement("span"); s.textContent = msg; t.append(s);
+  if (action){
+    const b = document.createElement("button"); b.className = "toast-act"; b.textContent = action.label;
+    b.onclick = () => { t.classList.add("hidden"); action.fn(); }; t.append(b);
+  }
+  t.classList.remove("hidden");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add("hidden"), ms);
 }
 
@@ -217,6 +236,10 @@ class DemoStore {
   async deleteGoal(id){ this.db.goals = this.db.goals.filter(g => g.id !== id); this.db.entries = this.db.entries.filter(e => e.goal_id !== id); this._save(); }
   async addEntry(e){ const n = {id:uuid(), created_at:new Date().toISOString(), ...e}; this.db.entries.push(n); this._save(); return n; }
   async deleteEntry(id){ this.db.entries = this.db.entries.filter(e => e.id !== id); this._save(); }
+  async reorder(updates){
+    for (const u of updates){ const g = this.db.goals.find(x => x.id === u.id); if (g) g.sort_order = u.sort_order; }
+    this._save();
+  }
   async deletePeriodEntries(goalId, year, month){
     this.db.entries = this.db.entries.filter(e => !(e.goal_id === goalId && e.period_year === year && (e.period_month ?? null) === (month ?? null))); this._save();
   }
@@ -249,6 +272,10 @@ class CloudStore {
   async deleteGoal(id){ this._chk(await this.sb.from("goals").delete().eq("id", id)); }
   async addEntry(e){ return this._chk(await this.sb.from("progress_entries").insert(e).select().single()); }
   async deleteEntry(id){ this._chk(await this.sb.from("progress_entries").delete().eq("id", id)); }
+  async reorder(updates){
+    const res = await Promise.all(updates.map(u => this.sb.from("goals").update({sort_order:u.sort_order}).eq("id", u.id)));
+    res.forEach(r => this._chk(r));
+  }
   async deletePeriodEntries(goalId, year, month){
     let q = this.sb.from("progress_entries").delete().eq("goal_id", goalId).eq("period_year", year);
     q = month == null ? q.is("period_month", null) : q.eq("period_month", month);
@@ -351,12 +378,13 @@ const ICON = {
   dots:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
   plus:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   down:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  grip:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>',
   check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
 };
 
 function render(){
   const app = $("#app");
-  const vis = S.goals.filter(g => S.showArchived || !g.archived);
+  const vis = sortGoals(S.goals.filter(g => S.showArchived || !g.archived));
   const yearly = vis.filter(isYearly);
   const monthly = vis.filter(g => appliesToMonth(g, S.month));
   const anyMonthly = vis.some(g => g.timeframe === "monthly");
@@ -393,7 +421,7 @@ function render(){
 
   <section class="block">
     <div class="sec-head"><h2>Year goals</h2><span class="meta">${yearly.length ? `${yearly.filter(g=>pct(g)>=100).length} of ${yearly.length} complete` : ""}</span></div>
-    ${yearly.length ? `<div class="grid">${yearly.map(g => cardHTML(g, null)).join("")}</div>`
+    ${yearly.length ? `<div class="grid" data-tf="yearly">${yearly.map(g => cardHTML(g, null, yearly.length > 1)).join("")}</div>`
       : emptyHTML(`No goals for the whole of ${S.year} yet.`, "yearly")}
   </section>
 
@@ -402,7 +430,7 @@ function render(){
     <div class="months" role="tablist">
       ${MON.map((m,i) => `<button role="tab" aria-selected="${S.month===i+1}" class="${S.month===i+1?"on":""} ${isCurYear && today.getMonth()===i ? "now":""}" data-act="month" data-m="${i+1}">${m}</button>`).join("")}
     </div>
-    ${monthly.length ? `<div class="grid">${monthly.map(g => cardHTML(g, S.month)).join("")}</div>`
+    ${monthly.length ? `<div class="grid" data-tf="monthly">${monthly.map(g => cardHTML(g, S.month, monthly.length > 1)).join("")}</div>`
       : emptyHTML(anyMonthly ? `No monthly goals scheduled for ${MONTHS[S.month-1]}.` : `No monthly goals for ${S.year} yet.`, "monthly")}
   </section>
   `;
@@ -415,7 +443,7 @@ function emptyHTML(text, timeframe){
   return `<div class="empty"><p>${esc(text)}</p><button class="btn" data-act="new" data-tf="${timeframe}">${ICON.plus} Add a ${timeframe === "yearly" ? "year" : "monthly"} goal</button></div>`;
 }
 
-function cardHTML(g, month){
+function cardHTML(g, month, draggable){
   const p = progress(g, month), pc = pct(g, month), st = statusOf(g, month), f = elapsedFrac(g, month);
   const tags = [g.category ? `<span class="tag">${esc(g.category)}</span>` : "",
                 `<span class="tag">${esc(scheduleLabel(g))}</span>`,
@@ -436,6 +464,7 @@ function cardHTML(g, month){
     <div class="bar" role="progressbar" aria-valuenow="${Math.round(pc)}" aria-valuemin="0" aria-valuemax="100"><div class="fill" style="width:${pc}%"></div>${pace}</div>
     <div class="card-actions">
       <button class="btn small primary" data-act="log" data-id="${g.id}" data-m="${month ?? ""}">${ICON.plus} Log progress</button>
+      <button class="btn small inc" data-act="inc" data-id="${g.id}" data-m="${month ?? ""}" title="Add 1${g.unit ? " " + esc(g.unit) : ""} now" aria-label="Add 1${g.unit ? " " + esc(g.unit) : ""}">+1</button>
       <span class="grow"></span>
       <button class="iconbtn" data-act="gmenu" data-id="${g.id}" data-m="${month ?? ""}" aria-label="Goal options">${ICON.dots}</button>
     </div>`;
@@ -448,12 +477,12 @@ function cardHTML(g, month){
       return `<button class="${inRange?"":"off"} ${mm===month?"sel":""}" ${inRange?`data-act="month" data-m="${mm}"`:"disabled"} title="${MONTHS[i]}: ${inRange ? Math.floor(v)+"%" : "not scheduled"}" aria-label="${MONTHS[i]} ${inRange ? Math.floor(v)+" percent" : "not scheduled"}"><i style="height:${v}%"></i></button>`;
     }).join("")}</div><div class="strip-labels">${MON.map(m=>`<span>${m[0]}</span>`).join("")}</div></div>`;
   }
-  return `<article class="card ${g.archived?"archived":""}">
+  return `<article class="card ${g.archived?"archived":""}" data-id="${g.id}">
     <div class="card-top"><div class="grow">
       <h3 class="card-title">${esc(g.title)}</h3>
       ${g.description ? `<p class="card-desc">${esc(g.description)}</p>` : ""}
       <div class="tags">${tags}</div>
-    </div></div>
+    </div>${draggable ? `<button class="grip" data-id="${g.id}" aria-label="Reorder ${esc(g.title)} (drag, or use arrow keys)" title="Drag to reorder">${ICON.grip}</button>` : ""}</div>
     ${body}
     ${strip}
     ${g.measure === "checkbox" && (st.text === "Missed" || st.text === "Not started") ? `<div class="nums"><span class="status ${st.cls}">${esc(st.text)}</span></div>` : ""}
@@ -478,6 +507,7 @@ document.addEventListener("click", async ev => {
     case "new": openGoalEditor(null, b.dataset.tf); break;
     case "log": openLog(g, m); break;
     case "toggle": await toggleDone(g, m); break;
+    case "inc": await increment(g, m); break;
     case "gmenu": openGoalMenu(g, m); break;
     case "export": await doExport(b.dataset.fmt); break;
     case "archived": S.showArchived = !S.showArchived; savePrefs(); render(); break;
@@ -489,6 +519,92 @@ document.addEventListener("click", async ev => {
     case "signout": await S.store.signOut(); location.reload(); break;
   }
 });
+
+/* One-click +1: logs an entry of 1 right away; created_at records the exact time. */
+async function increment(g, month){
+  if (!g) return;
+  try {
+    const e = await S.store.addEntry({goal_id:g.id, period_year:g.year, period_month:isYearly(g) ? null : month,
+      entry_date:defaultEntryDate(g, month), amount:1, note:null});
+    S.entries.push(e); render();
+    toast(`+1${g.unit ? " " + g.unit : ""} · ${g.title} · ${fmtTime(e.created_at || new Date())}`, 4500, {label:"Undo", fn: async () => {
+      try { await S.store.deleteEntry(e.id); S.entries = S.entries.filter(x => x.id !== e.id); render(); toast("Removed"); }
+      catch(err){ toast("Couldn't undo: " + err.message, 5000); }
+    }});
+  } catch(err){ toast("Couldn't save: " + err.message, 5000); }
+}
+
+/* ---------------------------------------------------------------------
+   Drag to reorder (pointer events: mouse, touch and pen) + arrow keys
+   --------------------------------------------------------------------- */
+let drag = null;
+document.addEventListener("pointerdown", ev => {
+  const h = ev.target.closest(".grip");
+  if (!h || (ev.pointerType === "mouse" && ev.button !== 0)) return;
+  const card = h.closest(".card"), grid = card.parentElement;
+  ev.preventDefault();
+  try { h.setPointerCapture(ev.pointerId); } catch {}
+  drag = {card, grid, handle:h, before:[...grid.children].map(c => c.dataset.id), x:ev.clientX, y:ev.clientY, raf:0};
+  card.classList.add("dragging"); document.body.classList.add("is-dragging");
+});
+document.addEventListener("pointermove", ev => {
+  if (!drag) return;
+  drag.x = ev.clientX; drag.y = ev.clientY;
+  if (!drag.raf) drag.raf = requestAnimationFrame(dragStep);
+});
+function dragStep(){
+  if (!drag) return;
+  drag.raf = 0;
+  const {x, y, card, grid} = drag;
+  // auto-scroll near the top/bottom edge
+  const edge = 70;
+  if (y < edge) window.scrollBy(0, -Math.ceil((edge - y) / 4));
+  else if (y > innerHeight - edge) window.scrollBy(0, Math.ceil((y - (innerHeight - edge)) / 4));
+  const el = document.elementFromPoint(x, y);
+  const over = el && el.closest(".card");
+  if (!over || over === card || over.parentElement !== grid) return;
+  const r = over.getBoundingClientRect();
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
+  const after = cols > 1 ? x > r.left + r.width / 2 : y > r.top + r.height / 2;
+  const ref = after ? over.nextElementSibling : over;
+  if (ref !== card && card.nextElementSibling !== ref) grid.insertBefore(card, ref);
+}
+function endDrag(){
+  if (!drag) return;
+  const {card, grid, before, raf} = drag; drag = null;
+  if (raf) cancelAnimationFrame(raf);
+  card.classList.remove("dragging"); document.body.classList.remove("is-dragging");
+  const after = [...grid.children].map(c => c.dataset.id);
+  if (after.join() !== before.join()) persistOrder(grid.dataset.tf, after);
+}
+document.addEventListener("pointerup", endDrag);
+document.addEventListener("pointercancel", endDrag);
+document.addEventListener("keydown", ev => {
+  const h = ev.target.closest && ev.target.closest(".grip");
+  if (!h) return;
+  const d = {ArrowUp:-1, ArrowLeft:-1, ArrowDown:1, ArrowRight:1}[ev.key];
+  if (!d) return;
+  ev.preventDefault();
+  const card = h.closest(".card"), grid = card.parentElement;
+  const ids = [...grid.children].map(c => c.dataset.id), i = ids.indexOf(card.dataset.id), j = i + d;
+  if (j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  persistOrder(grid.dataset.tf, ids).then(() => { const g2 = document.querySelector(`.grip[data-id="${card.dataset.id}"]`); g2 && g2.focus(); });
+});
+
+/** Save a new order for the cards shown in one section. Goals not shown
+    (archived, or monthly goals for other months) keep their relative slots. */
+async function persistOrder(tf, visibleIds){
+  const all = sortGoals(S.goals.filter(g => g.timeframe === tf));
+  const shown = new Set(visibleIds); let k = 0;
+  const merged = all.map(g => shown.has(g.id) ? visibleIds[k++] : g.id);
+  const updates = [];
+  merged.forEach((id, i) => { const g = S.goals.find(x => x.id === id); if (g && g.sort_order !== i){ g.sort_order = i; updates.push({id, sort_order:i}); } });
+  render();
+  if (!updates.length) return;
+  try { await S.store.reorder(updates); }
+  catch(err){ toast("Couldn't save the new order: " + err.message, 5000); await load(); }
+}
 
 async function toggleDone(g, month){
   const pm = isYearly(g) ? null : month;
@@ -601,7 +717,7 @@ function openGoalEditor(g, presetTf){
         category:String(f.get("category")).trim(), timeframe:state.timeframe, recurrence: state.timeframe === "monthly" ? state.recurrence : null,
         month:Number(f.get("month")), start_month:Number(f.get("start_month")), end_month:Number(f.get("end_month")),
         measure:state.measure, target: state.measure === "numeric" ? Number(f.get("target")) : null, unit:String(f.get("unit") || "").trim(),
-        archived: g ? g.archived : false, sort_order: g ? g.sort_order : S.goals.length };
+        archived: g ? g.archived : false, sort_order: g ? g.sort_order : nextSortOrder() };
       const problem = !out.title ? "Give the goal a name."
         : (out.measure === "numeric" && !(out.target > 0)) ? "Enter a target greater than zero."
         : (out.timeframe === "monthly" && out.recurrence === "recurring" && out.start_month > out.end_month) ? "The 'From' month must come before the 'Through' month."
@@ -655,7 +771,7 @@ function openHistory(g, month){
     <h3>History</h3>
     <div class="note">${esc(g.title)} · ${esc(periodLabel(g, month))}</div>
     ${list.length ? `<div class="hist">${list.map(e => `<div class="it">
-        <span class="d">${esc(e.entry_date)}</span>
+        <span class="d">${esc(e.entry_date)}${e.created_at ? `<br><span title="Time logged" style="font-size:11.5px">${esc(fmtTime(e.created_at))}</span>` : ""}</span>
         <span class="a">${g.measure === "checkbox" ? "Done" : (Number(e.amount) > 0 ? "+" : "") + fmtNum(e.amount)}</span>
         <span class="n">${esc(e.note || "")}</span>
         <button class="btn small danger" data-del="${e.id}" aria-label="Delete entry">Delete</button></div>`).join("")}</div>`
@@ -698,8 +814,8 @@ async function addSampleGoals(){
     {title:"File taxes", category:"Money", timeframe:"monthly", recurrence:"once", month:4, measure:"checkbox"},
   ];
   try {
-    const made = [];
-    for (const [i,s] of samples.entries()) made.push(await S.store.saveGoal({year:y, sort_order:S.goals.length+i, ...s}));
+    const made = [], base = nextSortOrder();
+    for (const [i,s] of samples.entries()) made.push(await S.store.saveGoal({year:y, sort_order:base+i, ...s}));
     // a little sample progress so the bars mean something
     const lastM = y === today.getFullYear() ? today.getMonth()+1 : (y < today.getFullYear() ? 12 : 0);
     for (let m = 1; m <= lastM; m++){
@@ -738,9 +854,9 @@ function summaryRows(goals, entries){
 }
 function entryRows(goals, entries){
   const byId = Object.fromEntries(goals.map(g => [g.id, g]));
-  return entries.slice().sort((a,b) => (a.entry_date||"").localeCompare(b.entry_date||"")).map(e => {
+  return entries.slice().sort((a,b) => (a.entry_date||"").localeCompare(b.entry_date||"") || (a.created_at||"").localeCompare(b.created_at||"")).map(e => {
     const g = byId[e.goal_id] || {};
-    return { "Date": e.entry_date, "Goal": g.title || "(deleted goal)", "Category": g.category || "",
+    return { "Date": e.entry_date, "Logged at": e.created_at ? fmtStamp(e.created_at) : "", "Goal": g.title || "(deleted goal)", "Category": g.category || "",
       "Period": e.period_month ? `${MONTHS[e.period_month-1]} ${e.period_year}` : String(e.period_year),
       "Amount": g.measure === "checkbox" ? "Done" : Number(e.amount), "Unit": g.unit || "", "Note": e.note || "" };
   });
