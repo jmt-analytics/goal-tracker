@@ -45,13 +45,17 @@ The publishable key is designed to be public; the row-level security rules in `s
 
 ## 4. Put the app online (so every device can reach it)
 
-**Easiest — Netlify Drop**
-1. Go to **app.netlify.com/drop** and sign in (free).
-2. Drag the whole folder (with `index.html` and `config.js`) onto the page.
-3. You'll get an address like `https://your-name.netlify.app`. Under **Site configuration → Change site name** you can make it something memorable.
-4. To update later, open the site in Netlify → **Deploys** → drag the folder again.
+**GitHub Pages (chosen host)**
+1. Sign up at **github.com** (free).
+2. **+ → New repository**, name it `goal-tracker`, leave it **Public** (free Pages needs a public repository), tick **Add a README file**, and click **Create repository**.
+3. **Add file → Upload files**: drag in `index.html` and `config.js` (top level, not in a folder) and click **Commit changes**.
+4. **Settings → Pages**: Source **Deploy from a branch**, Branch **main**, folder **/ (root)**, then **Save**.
+5. After a minute or two the page shows *Your site is live at* `https://YOUR-USERNAME.github.io/goal-tracker/`.
+6. To update later, edit a file with the pencil icon or upload a replacement with the same name. The site refreshes within a minute or two.
 
-**Alternative — GitHub Pages:** create a repository, upload the files, then **Settings → Pages → Deploy from branch → main**.
+Never upload your database password or the `service_role` key. The anon/publishable key in `config.js` is meant to be public.
+
+**Alternative — Netlify Drop:** drag the folder onto **app.netlify.com/drop**.
 
 Then, back in Supabase, go to **Authentication → URL Configuration** and set **Site URL** to your new address. This makes "Forgot password?" emails link back to your app.
 
@@ -63,9 +67,11 @@ Then, back in Supabase, go to **Authentication → URL Configuration** and set *
 
 - **Year goals** last all year. **Monthly goals** either *repeat each month* (with a fresh target every month, and an optional month range, e.g. Mar–Oct) or belong to *one specific month*.
 - Each goal is either **a number to reach** (log amounts as you go) or **done / not done** (one tap).
+- **+1** (next to *Log progress* on number goals) adds 1 instantly, with no form. The exact time is saved with the entry; tap **Undo** in the message at the bottom if it was a mis-tap.
+- **Reorder goals** by dragging the ⠿ handle at the top-right of a card (works with touch too) within its section. With a keyboard, focus the handle and use the arrow keys. The order is saved and shows on every device.
 - The thin grey tick on a progress bar shows where you'd be at an even pace through the period.
-- **⋯ on a goal:** edit, see and delete individual progress entries, archive (hide but keep history), or delete.
-- **⋯ at the top:** download Excel (Summary, Progress log and Goals sheets) or CSV, copy goals into next year, show archived goals, sign out.
+- **⋯ on a goal:** edit, see and delete individual progress entries (with the time each was logged), archive (hide but keep history), or delete.
+- **⋯ at the top:** download Excel (Summary, Progress log and Goals sheets) or CSV, copy goals into next year, show archived goals, sign out. The Progress log includes a *Logged at* date-and-time column.
 - Use a negative amount to correct a mistake, or delete the entry from the goal's history.
 
 ## Testing before January 1
@@ -87,11 +93,11 @@ Then, back in Supabase, go to **Authentication → URL Configuration** and set *
   -- every goal and period with progress and % complete
   select * from goal_period_summary where year = 2027 order by timeframe, title, period_month;
 
-  -- everything logged this month
-  select g.title, e.entry_date, e.amount, e.note
+  -- everything logged this month, with the time it was logged
+  select g.title, e.entry_date, e.created_at at time zone 'America/Chicago' as logged_at, e.amount, e.note
   from progress_entries e join goals g on g.id = e.goal_id
   where e.entry_date >= date_trunc('month', current_date)
-  order by e.entry_date;
+  order by e.created_at;
 
   -- monthly totals per goal for the year
   select g.title, e.period_month, sum(e.amount) as total
@@ -109,8 +115,8 @@ Then, back in Supabase, go to **Authentication → URL Configuration** and set *
 
 ## How the data is stored
 
-**goals** — one row per goal: `year`, `title`, `description`, `category`, `timeframe` (`yearly`/`monthly`), `recurrence` (`recurring`/`once`, monthly only), `month` (one-off monthly), `start_month`/`end_month` (recurring), `measure` (`numeric`/`checkbox`), `target`, `unit`, `archived`.
+**goals** — one row per goal: `year`, `title`, `description`, `category`, `timeframe` (`yearly`/`monthly`), `recurrence` (`recurring`/`once`, monthly only), `month` (one-off monthly), `start_month`/`end_month` (recurring), `measure` (`numeric`/`checkbox`), `target`, `unit`, `archived`, `sort_order` (the order you dragged goals into).
 
-**progress_entries** — one row per thing you log: `goal_id`, `period_year`, `period_month` (blank for year goals), `entry_date`, `amount` (for done/not-done goals, `1` means done), `note`.
+**progress_entries** — one row per thing you log: `goal_id`, `period_year`, `period_month` (blank for year goals), `entry_date`, `amount` (for done/not-done goals, `1` means done), `note`, `created_at` (exact date and time it was logged).
 
 **goal_period_summary** (view) — one row per goal per period with totals and % complete; this is the same data as the Summary sheet in the Excel download.
